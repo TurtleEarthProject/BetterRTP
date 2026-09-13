@@ -10,6 +10,8 @@ import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
+import java.util.Locale;
+
 public class RTPEffect_Sounds {
 
     private boolean enabled;
@@ -52,17 +54,24 @@ public class RTPEffect_Sounds {
                 packet.setEffectPositionZ(loc.getBlockZ());
                 packet.sendPacket(p);
             } catch (NoClassDefFoundError | Exception e) {
-                BetterRTP.getInstance().getLogger().severe("ProtocolLib Sounds is enabled in the effects.yml file, but no ProtocolLib plugin was found!");
-                p.playSound(p.getLocation(), getSound(sound), 1F, 1F);
+                BetterRTP.getInstance().getLogger().warning("ProtocolLib could not play sound '" + sound
+                        + "'; falling back to Bukkit: " + e.getMessage());
+                playBukkitSound(loc, p, sound);
             }
         } else
-            p.playSound(p.getLocation(), getSound(sound), 1F, 1F);
+            playBukkitSound(loc, p, sound);
+    }
+
+    private void playBukkitSound(Location loc, Player player, String name) {
+        Sound sound = getSound(name);
+        // An outdated/invalid sound setting must not interrupt the teleport workflow.
+        if (sound != null) player.playSound(loc, sound, 1F, 1F);
     }
 
     private Sound getSound(String sound) {
         try {
-            return Sound.valueOf(sound.toUpperCase());
-        } catch (IllegalArgumentException e) {
+            return Sound.valueOf(sound.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException | NullPointerException e) {
             BetterRTP.getInstance().getLogger().info("The sound '" + sound + "' is invalid!");
             return null;
         }

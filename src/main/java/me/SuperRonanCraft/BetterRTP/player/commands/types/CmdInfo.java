@@ -38,7 +38,6 @@ import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
-import xyz.xenondevs.particle.ParticleEffect;
 
 public class CmdInfo implements RTPCommand, RTPCommandHelpable {
 
@@ -109,11 +108,11 @@ public class CmdInfo implements RTPCommand, RTPCommandHelpable {
         List<String> info = new ArrayList<>();
         // BetterRTP pl = BetterRTP.getInstance();
 
-        for (ParticleEffect eff : ParticleEffect.VALUES) {
+        for (String eff : RTPEffect_Particles.getParticleNames()) {
             if (info.isEmpty() || info.size() % 2 == 0) {
-                info.add("&7" + eff.name() + "&r");
+                info.add("&7" + eff + "&r");
             } else
-                info.add("&f" + eff.name() + "&r");
+                info.add("&f" + eff + "&r");
         }
 
         info.forEach(str ->

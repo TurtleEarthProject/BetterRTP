@@ -3,6 +3,7 @@ package me.SuperRonanCraft.BetterRTP.player.rtp.effects;
 import me.SuperRonanCraft.BetterRTP.BetterRTP;
 import me.SuperRonanCraft.BetterRTP.references.file.FileOther;
 import me.SuperRonanCraft.BetterRTP.versions.AsyncHandler;
+import me.SuperRonanCraft.BetterRTP.versions.BukkitParticles;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -11,6 +12,7 @@ import xyz.xenondevs.particle.ParticleEffect;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 //---
 //Credit to @ByteZ1337 for ParticleLib - https://github.com/ByteZ1337/ParticleLib
@@ -22,6 +24,7 @@ public class RTPEffect_Particles {
 
     private boolean enabled;
     private final List<ParticleEffect> effects = new ArrayList<>();
+    private final List<BukkitParticles.Effect> bukkitEffects = new ArrayList<>();
     private String shape;
     private final int precision = 16;
 
@@ -33,6 +36,8 @@ public class RTPEffect_Particles {
             };
 
     void load() {
+        effects.clear();
+        bukkitEffects.clear();
         FileOther.FILETYPE config = getPl().getFiles().getType(FileOther.FILETYPE.EFFECTS);
         enabled = config.getBoolean("Particles.Enabled");
         if (!enabled) return;
@@ -48,19 +53,27 @@ public class RTPEffect_Particles {
         try {
             for (String type : types) {
                 typeTrying = type;
-                effects.add(ParticleEffect.valueOf(type.toUpperCase()));
+                if (BukkitParticles.isAvailable())
+                    bukkitEffects.add(BukkitParticles.resolve(type));
+                else
+                    effects.add(ParticleEffect.valueOf(type.toUpperCase(Locale.ROOT)));
             }
         } catch (IllegalArgumentException | NullPointerException e) {
             effects.clear();
-            effects.add(ParticleEffect.ASH);
-            getPl().getLogger().severe("The particle '" + typeTrying + "' doesn't exist! Default particle enabled... " +
+            bukkitEffects.clear();
+            if (BukkitParticles.isAvailable())
+                bukkitEffects.add(BukkitParticles.resolve("CRIT"));
+            else
+                effects.add(ParticleEffect.CRIT);
+            getPl().getLogger().severe("The particle '" + typeTrying + "' is unavailable or needs extra data! Default particle enabled... " +
                     "Try using '/rtp info particles' to get a list of available particles");
         } catch (ExceptionInInitializerError | NoClassDefFoundError e2) {
             effects.clear();
             getPl().getLogger().severe("The particle '" + typeTrying + "' created a fatal error when loading particles! Your MC version isn't supported!");
             enabled = false;
         }
-        shape = config.getString("Particles.Shape").toUpperCase();
+        String configuredShape = config.getString("Particles.Shape");
+        shape = configuredShape == null ? shapeTypes[0] : configuredShape.toUpperCase(Locale.ROOT);
         if (!Arrays.asList(shapeTypes).contains(shape)) {
             getPl().getLogger().severe("The particle shape '" + shape + "' doesn't exist! Default particle shape enabled...");
             getPl().getLogger().severe("Try using '/rtp info shapes' to get a list of shapes, or: " + Arrays.asList(shapeTypes));
@@ -70,7 +83,8 @@ public class RTPEffect_Particles {
 
     public void display(Player p) {
         if (!enabled) return;
-        AsyncHandler.async(() -> {
+        AsyncHandler.syncAtEntity(p, () -> {
+            if (!p.isOnline()) return;
             try { //Incase the library errors out
                 switch (shape) {
                     case "TELEPORT":
@@ -97,6 +111,8 @@ public class RTPEffect_Particles {
             for (ParticleEffect effect : effects) {
                 effect.display(loc.clone().add(vec), new Vector(0, -0.125, 0), .15f, 0, null, p);
             }
+            for (BukkitParticles.Effect effect : bukkitEffects)
+                effect.display(loc.clone().add(vec), new Vector(0, -0.125, 0), .15, 0, p);
         }
     }
 
@@ -109,6 +125,8 @@ public class RTPEffect_Particles {
                 for (ParticleEffect effect : effects) {
                     effect.display(loc.clone().add(vec), p);
                 }
+                for (BukkitParticles.Effect effect : bukkitEffects)
+                    effect.display(loc.clone().add(vec), new Vector(), 0, 1, p);
             }
     }
 
@@ -119,6 +137,8 @@ public class RTPEffect_Particles {
             for (ParticleEffect effect : effects) {
                 effect.display(loc.clone().add(vec), vec, 1.5f, 0, null, p);
             }
+            for (BukkitParticles.Effect effect : bukkitEffects)
+                effect.display(loc.clone().add(vec), vec, 1.5, 0, p);
         }
     }
 
@@ -132,6 +152,13 @@ public class RTPEffect_Particles {
         double z1 = Math.sin(p1) * radius;
         double z2 = Math.sin(p2) * radius;
         return new Vector(x2 - x1, 0, z2 - z1);
+    }
+
+    public static List<String> getParticleNames() {
+        if (BukkitParticles.isAvailable()) return BukkitParticles.names();
+        List<String> names = new ArrayList<>();
+        for (ParticleEffect effect : ParticleEffect.VALUES) names.add(effect.name());
+        return names;
     }
 
     private BetterRTP getPl() {
