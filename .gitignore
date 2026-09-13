@@ -1,0 +1,12 @@
+bin/
+.git/
+.settings/
+.classpath/
+.project/
+target
+.idea
+*.iml
+BetterRTP.wiki/
+.DS_Store
+.vscode/
+node_modules/
